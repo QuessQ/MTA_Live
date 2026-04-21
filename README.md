@@ -12,19 +12,37 @@ One codebase. Installable on iOS and Android via "Add to Home Screen." Zero recu
 
 ## Status
 
-**v0 MVP scaffold** — building in public, starting with the core loop:
+**v0 — most of the PRD scope is shipped.** The app opens, routes, plans
+trips, and learns your commute. Still on the roadmap: WASM RAPTOR over
+full static GTFS, the non-subway feeds (buses, LIRR, MNR, SIR), live
+elevator/escalator status, crowding.
 
 - ✅ Answer Mode default view + swipe to Map Mode
 - ✅ Live subway map (MapLibre + OpenFreeMap)
 - ✅ Station tap → arrivals sheet
-- ✅ Mode filter chips
+- ✅ Mode filter chips (live-filters map markers)
+- ✅ Live GTFS-RT integration (all 8 NYC subway feeds)
+- ✅ Destination search + in-browser fastest-route router
+- ✅ Route polyline + summary card in Answer Mode
+- ✅ Service alerts feed + per-line badges + detail sheet
+- ✅ Leave-now nudges with haptic tick
+- ✅ Step-free routing filter (bundled accessibility data)
+- ✅ Favorites + settings (preferred maps app, reduced motion, clear data)
+- ✅ OMNY fare companion (local-only transfer timer + weekly cap)
+- ✅ Shareable ETA links (self-contained, no server state)
+- ✅ Commute inference (local-only, IndexedDB-backed)
+- ✅ Home/Work quick-access chips during relevant hours
+- ✅ Boarding intelligence — curated best-car hints per station pair
+- ✅ First-launch onboarding explainer
 - ✅ Deep-link handoff to Apple / Google Maps
 - ✅ PWA manifest + service worker shell
 - ✅ Cloudflare Worker relay for MTA GTFS-RT (CORS)
-- 🚧 Real GTFS-RT integration (relay deployment required)
-- ⏳ In-browser RAPTOR routing (WASM) — planned
-- ⏳ Commute inference (DBSCAN, local-only) — planned
-- ⏳ OMNY timer, ETA share, crowding, alerts panel — planned
+- ⏳ WASM RAPTOR over full static GTFS
+- ⏳ Non-subway feeds (SIRI buses, LIRR, MNR, SIR GTFS-RT)
+- ⏳ Live elevator/escalator feed
+- ⏳ Crowding indicators
+- ⏳ Haptic "your stop is next" (needs active-trip tracking)
+- ⏳ Weather-aware routing (v2 per PRD)
 
 ---
 
