@@ -13,6 +13,7 @@ import { SettingsSheet } from "@/features/settings/SettingsSheet";
 import { AlertsButton } from "@/features/alerts/AlertsButton";
 import { AlertsSheet } from "@/features/alerts/AlertsSheet";
 import { LeaveNowCard } from "@/features/leave-now/LeaveNowCard";
+import { OmnyCard } from "@/features/omny/OmnyCard";
 
 interface AnswerCard {
   station: Station;
@@ -234,6 +235,8 @@ export function AnswerMode() {
       )}
 
       <FavoritesRow />
+
+      <OmnyCard />
 
       <button
         onClick={() => setView("map")}

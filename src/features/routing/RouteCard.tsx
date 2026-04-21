@@ -1,6 +1,7 @@
 import { useStore } from "@/store";
 import { STATION_BY_ID } from "@/data/stations";
 import { LineBullet } from "@/ui/LineBullet";
+import { ShareEtaButton } from "@/features/share-eta/ShareEtaButton";
 
 export function RouteCard() {
   const { route, clearRoute, destinationStationId, originStationId } = useStore();
@@ -40,7 +41,9 @@ export function RouteCard() {
         </div>
       </header>
 
-      <ol className="mt-2 space-y-2">
+      <ShareEtaButton />
+
+      <ol className="mt-3 space-y-2">
         {route.legs.map((leg, i) => {
           const from = STATION_BY_ID.get(leg.from);
           const to = STATION_BY_ID.get(leg.to);

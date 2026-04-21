@@ -1,6 +1,7 @@
 import { BottomSheet } from "@/ui/BottomSheet";
 import { useStore } from "@/store";
 import { detectPlatform } from "@/lib/platform";
+import { useOmny } from "@/features/omny/omnyStore";
 
 interface Props {
   open: boolean;
@@ -18,6 +19,7 @@ export function SettingsSheet({ open, onClose }: Props) {
     clearAllLocalData,
     favorites,
   } = useStore();
+  const { enabled: omnyEnabled, enable: setOmnyEnabled, clear: clearOmny } = useOmny();
 
   const platform = detectPlatform();
 
@@ -65,6 +67,19 @@ export function SettingsSheet({ open, onClose }: Props) {
           />
         </Group>
 
+        <Group label="OMNY fare companion">
+          <Toggle
+            label="Enable OMNY companion"
+            checked={omnyEnabled}
+            onChange={setOmnyEnabled}
+          />
+          <p className="text-bone-300 text-[11px] leading-snug px-1">
+            Manual log only — tap "I tapped in" when you board. Tracks your
+            2-hour free-transfer window and your $34 weekly cap locally. Never
+            sent off-device. OMNY has no public API.
+          </p>
+        </Group>
+
         <Group label="Your data">
           <p className="text-bone-300 text-xs pb-2 numerals">
             {favorites.length} favorite{favorites.length === 1 ? "" : "s"} · stored on-device only · never transmitted
@@ -75,6 +90,8 @@ export function SettingsSheet({ open, onClose }: Props) {
                 confirm("Clear all PULSE data on this device? This cannot be undone.")
               ) {
                 clearAllLocalData();
+                clearOmny();
+                try { localStorage.removeItem("pulse-omny"); } catch { /* ignore */ }
                 onClose();
               }
             }}
