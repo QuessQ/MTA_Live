@@ -26,6 +26,12 @@ export function StationSheet() {
     arrivals,
     userLocation,
     preferredMaps,
+    favorites,
+    toggleFavorite,
+    setDestinationStation,
+    setOriginStation,
+    originStationId,
+    setView,
   } = useStore();
 
   const station = selectedStationId ? STATION_BY_ID.get(selectedStationId) : null;
@@ -44,13 +50,15 @@ export function StationSheet() {
     );
   }
 
+  const isFavorite = favorites.includes(station.id);
+
   return (
     <BottomSheet
       open={!!selectedStationId}
       onClose={() => setSelectedStation(null)}
       title={station.name}
     >
-      <div className="flex flex-wrap gap-1.5 pb-4">
+      <div className="flex flex-wrap items-center gap-1.5 pb-4">
         {station.lines.map((l) => (
           <LineBullet key={l} line={l} size="sm" />
         ))}
@@ -59,13 +67,35 @@ export function StationSheet() {
             ♿ step-free
           </span>
         )}
+        <button
+          onClick={() => toggleFavorite(station.id)}
+          className={`ml-auto h-9 px-3 rounded-lg border text-xs numerals uppercase tracking-widest transition-colors ${
+            isFavorite
+              ? "bg-gold/15 border-gold/60 text-gold-soft"
+              : "border-ink-300 text-bone-300 hover:text-bone-0"
+          }`}
+          aria-pressed={isFavorite}
+        >
+          {isFavorite ? "★ Saved" : "☆ Save"}
+        </button>
       </div>
 
       <DirectionColumn label="Uptown / Outbound" arrivals={grouped.N} />
       <div className="h-4" />
       <DirectionColumn label="Downtown / Inbound" arrivals={grouped.S} />
 
-      <div className="mt-5">
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <button
+          onClick={() => {
+            if (!originStationId) setOriginStation(station.id);
+            else setDestinationStation(station.id);
+            setSelectedStation(null);
+            setView("answer");
+          }}
+          className="rounded-xl border border-gold/50 text-gold-soft hover:bg-gold/10 font-semibold py-3 text-xs"
+        >
+          {originStationId ? "Set as destination" : "Set as origin"}
+        </button>
         <button
           onClick={() =>
             userLocation &&
@@ -76,9 +106,9 @@ export function StationSheet() {
             )
           }
           disabled={!userLocation}
-          className="w-full rounded-xl bg-gold text-ink-0 font-semibold py-3 text-sm disabled:opacity-40"
+          className="rounded-xl bg-gold text-ink-0 font-semibold py-3 text-xs disabled:opacity-40"
         >
-          Walking directions to station
+          Walking directions
         </button>
       </div>
     </BottomSheet>

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useStore } from "@/store";
 import { STATIONS, type Station } from "@/data/stations";
 import { nearestFrom, walkSeconds } from "@/lib/geo";
@@ -6,6 +6,10 @@ import { etaMinutesOnly, formatWalk } from "@/lib/time";
 import { LineBullet } from "@/ui/LineBullet";
 import { StaleBadge } from "@/ui/StaleBadge";
 import type { Arrival } from "@/data/gtfs-rt/client";
+import { DestinationSearch } from "@/features/search/DestinationSearch";
+import { RouteCard } from "@/features/routing/RouteCard";
+import { FavoritesRow } from "@/features/favorites/FavoritesRow";
+import { SettingsSheet } from "@/features/settings/SettingsSheet";
 
 interface AnswerCard {
   station: Station;
@@ -36,13 +40,13 @@ function buildAnswer(
   // Alternatives: soonest arrival from other stations within ~8 min walk.
   const others = STATIONS.filter((s) => s.id !== station.id);
   const withWalk = others
-    .map((s) => {
-      const d = Math.hypot(
+    .map((s) => ({
+      s,
+      meters: Math.hypot(
         (s.lat - origin.lat) * 111_000,
         (s.lng - origin.lng) * 85_000
-      );
-      return { s, meters: d };
-    })
+      ),
+    }))
     .filter((x) => x.meters < 700)
     .sort((a, b) => a.meters - b.meters)
     .slice(0, 4);
@@ -63,12 +67,32 @@ function buildAnswer(
 }
 
 export function AnswerMode() {
-  const { arrivals, userLocation, setSelectedStation, setView } = useStore();
+  const {
+    arrivals,
+    userLocation,
+    setSelectedStation,
+    setView,
+    setOriginStation,
+    setDestinationStation,
+    originStationId,
+    destinationStationId,
+    route,
+  } = useStore();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const card = useMemo(
     () => buildAnswer(userLocation, arrivals),
     [userLocation, arrivals]
   );
+
+  // Auto-set origin to the nearest station when the rider starts a search.
+  const handleDestination = (id: string | null) => {
+    if (id && !originStationId && card) {
+      setOriginStation(card.station.id);
+    }
+    setDestinationStation(id);
+    if (id) setView("map");
+  };
 
   if (!card) {
     return (
@@ -91,60 +115,85 @@ export function AnswerMode() {
 
   return (
     <section
-      className="flex h-full flex-col px-6"
+      className="flex h-full flex-col overflow-y-auto px-6"
       style={{ paddingTop: "calc(var(--safe-top) + 16px)" }}
     >
-      <header className="flex items-center justify-between pb-6 no-select">
+      <header className="flex items-center justify-between pb-4 no-select">
         <div className="flex items-baseline gap-2">
           <span className="numerals font-bold text-gold tracking-tight text-sm">PULSE</span>
           <StaleBadge />
         </div>
-        <span className="text-[10px] numerals text-bone-300">
-          NYC · MTA LIVE
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] numerals text-bone-300">NYC · MTA LIVE</span>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="h-11 w-11 grid place-items-center text-bone-300 hover:text-bone-0 -mr-2"
+            aria-label="Settings"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </header>
 
-      {/* Primary card — the one answer. */}
-      <article
-        className="flex-1 flex flex-col justify-center"
-        onClick={() => {
-          setSelectedStation(station.id);
-          setView("map");
-        }}
-        role="button"
-        aria-label={`${station.name} next train`}
-      >
-        <div className="flex items-center gap-2 text-bone-300 text-xs uppercase tracking-widest">
-          <span>Nearest · {station.name}</span>
-        </div>
+      {/* Destination search */}
+      <div className="pb-2">
+        <DestinationSearch
+          value={destinationStationId}
+          placeholder="Where to?"
+          label="Destination"
+          onPick={handleDestination}
+        />
+      </div>
 
-        <div className="mt-6 flex items-end gap-4">
-          <div className="flex flex-col gap-2">
-            {arrival && <LineBullet line={arrival.line} size="lg" />}
+      {/* Route card, if one exists */}
+      {route && <RouteCard />}
+
+      {/* Primary card — the one answer. Hidden when a route is showing. */}
+      {!route && (
+        <article
+          className="flex-1 flex flex-col justify-center pt-4"
+          onClick={() => {
+            setSelectedStation(station.id);
+            setView("map");
+          }}
+          role="button"
+          aria-label={`${station.name} next train`}
+        >
+          <div className="flex items-center gap-2 text-bone-300 text-xs uppercase tracking-widest">
+            <span>Nearest · {station.name}</span>
           </div>
-          <div className="flex items-end gap-3">
-            <span className="numerals font-bold text-gold leading-none text-hero">
-              {arrival ? etaMinutesOnly(arrival.etaSec) : "—"}
-            </span>
-            <span className="numerals text-bone-200 pb-3 text-xl">min</span>
+
+          <div className="mt-6 flex items-end gap-4">
+            <div className="flex flex-col gap-2">
+              {arrival && <LineBullet line={arrival.line} size="lg" />}
+            </div>
+            <div className="flex items-end gap-3">
+              <span className="numerals font-bold text-gold leading-none text-hero">
+                {arrival ? etaMinutesOnly(arrival.etaSec) : "—"}
+              </span>
+              <span className="numerals text-bone-200 pb-3 text-xl">min</span>
+            </div>
           </div>
-        </div>
 
-        <div className="mt-5 space-y-1">
-          <p className="text-bone-0 text-xl font-medium">
-            {arrival
-              ? `${directionLabel} ${arrival.line} train`
-              : "No live arrivals yet"}
-          </p>
-          <p className="text-bone-300 text-sm">
-            {formatWalk(walkSeconds(walkMeters))} · {Math.round(walkMeters)} m
-          </p>
-        </div>
-      </article>
+          <div className="mt-5 space-y-1">
+            <p className="text-bone-0 text-xl font-medium">
+              {arrival
+                ? `${directionLabel} ${arrival.line} train`
+                : "No live arrivals yet"}
+            </p>
+            <p className="text-bone-300 text-sm">
+              {formatWalk(walkSeconds(walkMeters))} · {Math.round(walkMeters)} m
+            </p>
+          </div>
+        </article>
+      )}
 
-      {/* Alternatives. */}
-      {alternatives.length > 0 && (
-        <div className="mb-4 space-y-2">
+      {/* Alternatives */}
+      {!route && alternatives.length > 0 && (
+        <div className="mt-5 space-y-2">
           <p className="text-[10px] numerals tracking-widest text-bone-300 uppercase">
             Alternatives
           </p>
@@ -171,10 +220,11 @@ export function AnswerMode() {
         </div>
       )}
 
-      {/* Swipe up hint. */}
+      <FavoritesRow />
+
       <button
         onClick={() => setView("map")}
-        className="mb-2 text-center py-4 text-bone-300 text-xs uppercase tracking-widest no-select"
+        className="mt-auto mb-2 text-center py-4 text-bone-300 text-xs uppercase tracking-widest no-select"
       >
         <span className="inline-flex flex-col items-center gap-1">
           <svg width="14" height="8" viewBox="0 0 14 8" fill="none" aria-hidden="true">
@@ -183,6 +233,8 @@ export function AnswerMode() {
           Swipe up for map
         </span>
       </button>
+
+      <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </section>
   );
 }

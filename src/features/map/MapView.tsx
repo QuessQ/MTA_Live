@@ -2,8 +2,9 @@ import { useEffect, useRef } from "react";
 import maplibregl, { Map as MLMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useStore } from "@/store";
-import { STATIONS, type Station } from "@/data/stations";
+import { STATIONS, STATION_BY_ID, type Station } from "@/data/stations";
 import { lineColor } from "@/data/lines";
+import type { Route } from "@/features/routing/planner";
 
 const DEFAULT_STYLE =
   import.meta.env.VITE_TILE_STYLE_URL ??
@@ -32,11 +33,35 @@ function buildStationMarker(station: Station): HTMLElement {
   return el;
 }
 
+const ROUTE_SOURCE_ID = "pulse-route";
+const ROUTE_LAYER_ID = "pulse-route-line";
+const ROUTE_GLOW_LAYER_ID = "pulse-route-glow";
+
+function routeToGeoJSON(route: Route | null): GeoJSON.FeatureCollection {
+  if (!route) return { type: "FeatureCollection", features: [] };
+  const features: GeoJSON.Feature[] = [];
+  for (const leg of route.legs) {
+    const coords: [number, number][] = [];
+    for (const stopId of leg.stops) {
+      const s = STATION_BY_ID.get(stopId);
+      if (s) coords.push([s.lng, s.lat]);
+    }
+    if (coords.length >= 2) {
+      features.push({
+        type: "Feature",
+        properties: { color: lineColor[leg.line] },
+        geometry: { type: "LineString", coordinates: coords },
+      });
+    }
+  }
+  return { type: "FeatureCollection", features };
+}
+
 export function MapView() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MLMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
-  const { setSelectedStation, userLocation, view } = useStore();
+  const { setSelectedStation, userLocation, view, route } = useStore();
 
   // Init map once. We intentionally don't depend on userLocation here — the
   // recenter effect below handles location updates. Re-initializing the map
@@ -66,6 +91,34 @@ export function MapView() {
         });
         markersRef.current.push(m);
       }
+
+      map.addSource(ROUTE_SOURCE_ID, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: ROUTE_GLOW_LAYER_ID,
+        type: "line",
+        source: ROUTE_SOURCE_ID,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": ["get", "color"],
+          "line-width": 10,
+          "line-opacity": 0.25,
+          "line-blur": 4,
+        },
+      });
+      map.addLayer({
+        id: ROUTE_LAYER_ID,
+        type: "line",
+        source: ROUTE_SOURCE_ID,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": ["get", "color"],
+          "line-width": 5,
+          "line-opacity": 0.95,
+        },
+      });
     });
 
     return () => {
@@ -85,6 +138,19 @@ export function MapView() {
     // Resize after the shell finishes its translate transition.
     const id = window.setTimeout(() => {
       map.resize();
+      if (route && route.legs.length > 0) {
+        // Fit route bounds.
+        const allStops = route.legs.flatMap((l) => l.stops);
+        const coords = allStops
+          .map((id) => STATION_BY_ID.get(id))
+          .filter((s): s is Station => !!s);
+        if (coords.length >= 2) {
+          const bounds = new maplibregl.LngLatBounds();
+          for (const c of coords) bounds.extend([c.lng, c.lat]);
+          map.fitBounds(bounds, { padding: 80, duration: 450, maxZoom: 14 });
+          return;
+        }
+      }
       if (userLocation) {
         map.easeTo({
           center: [userLocation.lng, userLocation.lat],
@@ -94,7 +160,21 @@ export function MapView() {
       }
     }, 300);
     return () => window.clearTimeout(id);
-  }, [view, userLocation]);
+  }, [view, userLocation, route]);
+
+  // Update route polyline whenever the route changes.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const apply = () => {
+      const source = map.getSource(ROUTE_SOURCE_ID) as
+        | maplibregl.GeoJSONSource
+        | undefined;
+      if (source) source.setData(routeToGeoJSON(route));
+    };
+    if (map.isStyleLoaded()) apply();
+    else map.once("load", apply);
+  }, [route]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }
