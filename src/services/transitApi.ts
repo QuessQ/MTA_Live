@@ -61,3 +61,13 @@ export async function fetchRouteOptions(
     destLon: String(destination.longitude),
   });
 }
+
+export interface GeocodedPlace {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
+export async function fetchGeocode(query: string): Promise<GeocodedPlace[]> {
+  return fetchJson<GeocodedPlace[]>('/geocode', { q: query });
+}

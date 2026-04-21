@@ -1,4 +1,5 @@
-import { useAlerts, useTrackedLines } from '@/hooks';
+import { useEffect } from 'react';
+import { useAlerts, useTrackedLines, useNotifications } from '@/hooks';
 import { isAlertActive } from '@/types';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorBanner } from '@/components/common/ErrorBanner';
@@ -9,12 +10,36 @@ export function AlertsPage() {
   const { alerts, loading, error, refresh } = useAlerts(
     lineIds.length > 0 ? lineIds : undefined
   );
+  const { supported, enabled, permission, toggle, notifyAlerts } = useNotifications();
 
   const activeAlerts = alerts.filter(isAlertActive);
 
+  useEffect(() => {
+    if (activeAlerts.length > 0) {
+      notifyAlerts(activeAlerts);
+    }
+  }, [activeAlerts, notifyAlerts]);
+
   return (
     <div className="page alerts-page">
-      <h1>Service Alerts</h1>
+      <div className="page-header">
+        <h1>Service Alerts</h1>
+        {supported && (
+          <button
+            className={`btn btn-sm ${enabled ? 'btn-active' : ''}`}
+            onClick={toggle}
+            title={
+              permission === 'denied'
+                ? 'Notifications blocked in browser settings'
+                : enabled
+                  ? 'Disable notifications'
+                  : 'Enable notifications'
+            }
+          >
+            {permission === 'denied' ? 'Blocked' : enabled ? 'Notifications On' : 'Notifications Off'}
+          </button>
+        )}
+      </div>
 
       {lineIds.length > 0 && (
         <p className="filter-note">

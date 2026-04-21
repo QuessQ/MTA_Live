@@ -4,6 +4,8 @@ import { findNearbyStations } from './stationData.js';
 import { getSubwayArrivals } from './subwayFeed.js';
 import { getBusArrivals } from './busFeed.js';
 import { getAlerts } from './alertsFeed.js';
+import { planRoutes } from './routePlanner.js';
+import { geocode } from './geocode.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
@@ -56,6 +58,26 @@ app.get('/api/alerts', async (req, res) => {
   }
 });
 
+app.get('/api/route-plan', async (req, res) => {
+  try {
+    const originLat = parseFloat(req.query.originLat as string);
+    const originLon = parseFloat(req.query.originLon as string);
+    const destLat = parseFloat(req.query.destLat as string);
+    const destLon = parseFloat(req.query.destLon as string);
+
+    if ([originLat, originLon, destLat, destLon].some(isNaN)) {
+      res.status(400).json({ error: 'originLat, originLon, destLat, destLon are required' });
+      return;
+    }
+
+    const options = await planRoutes(originLat, originLon, destLat, destLon);
+    res.json(options);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(502).json({ error: message });
+  }
+});
+
 app.get('/api/lines', (_req, res) => {
   const lines = [
     { id: '1', name: '1', shortName: '1', type: 'subway', color: '#EE352E' },
@@ -84,6 +106,21 @@ app.get('/api/lines', (_req, res) => {
     { id: 'SIR', name: 'Staten Island Railway', shortName: 'SIR', type: 'subway', color: '#0039A6' },
   ];
   res.json(lines);
+});
+
+app.get('/api/geocode', async (req, res) => {
+  try {
+    const q = req.query.q as string;
+    if (!q) {
+      res.status(400).json({ error: 'q parameter is required' });
+      return;
+    }
+    const results = await geocode(q);
+    res.json(results);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(502).json({ error: message });
+  }
 });
 
 app.listen(PORT, () => {

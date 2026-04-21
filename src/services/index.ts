@@ -8,7 +8,9 @@ export {
   fetchLineStatus,
   fetchAlerts,
   fetchRouteOptions,
+  fetchGeocode,
 } from './transitApi';
+export type { GeocodedPlace } from './transitApi';
 
 export {
   loadSavedRoutes,
