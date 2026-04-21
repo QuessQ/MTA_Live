@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overscroll-behavior-y: none;
+}
+
+body {
+  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+  font-feature-settings: "ss01" on, "cv11" on;
+}
+
+/* Tabular numerals everywhere we show times/numbers. */
+.numerals {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" on, "zero" on;
+}
+
+/* Touch-friendly disable text selection on UI chrome */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* MapLibre overrides: swap the attribution chip into our palette */
+.maplibregl-ctrl-attrib {
+  background: rgba(10, 10, 11, 0.7) !important;
+  color: #8e8c87 !important;
+  font-family: "DM Sans", sans-serif;
+  font-size: 10px;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: #c4c1ba !important;
+}
+
+.maplibregl-canvas:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

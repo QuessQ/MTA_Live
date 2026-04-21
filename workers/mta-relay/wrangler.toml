@@ -1,0 +1,15 @@
+name = "mta-relay"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+# One tiny worker between the browser and MTA. Adds CORS, caches 10s
+# at the edge. Ships as a single file, <100 LOC (PRD §8.2).
+
+[vars]
+UPSTREAM = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds"
+CACHE_TTL = "10"
+
+# Optional: pin routes / custom domain.
+# routes = [
+#   { pattern = "relay.pulse.example/*", custom_domain = true }
+# ]
