@@ -10,6 +10,9 @@ import { DestinationSearch } from "@/features/search/DestinationSearch";
 import { RouteCard } from "@/features/routing/RouteCard";
 import { FavoritesRow } from "@/features/favorites/FavoritesRow";
 import { SettingsSheet } from "@/features/settings/SettingsSheet";
+import { AlertsButton } from "@/features/alerts/AlertsButton";
+import { AlertsSheet } from "@/features/alerts/AlertsSheet";
+import { LeaveNowCard } from "@/features/leave-now/LeaveNowCard";
 
 interface AnswerCard {
   station: Station;
@@ -79,6 +82,7 @@ export function AnswerMode() {
     route,
   } = useStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
 
   const card = useMemo(
     () => buildAnswer(userLocation, arrivals),
@@ -123,8 +127,8 @@ export function AnswerMode() {
           <span className="numerals font-bold text-gold tracking-tight text-sm">PULSE</span>
           <StaleBadge />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] numerals text-bone-300">NYC · MTA LIVE</span>
+        <div className="flex items-center">
+          <AlertsButton onOpen={() => setAlertsOpen(true)} />
           <button
             onClick={() => setSettingsOpen(true)}
             className="h-11 w-11 grid place-items-center text-bone-300 hover:text-bone-0 -mr-2"
@@ -150,6 +154,15 @@ export function AnswerMode() {
 
       {/* Route card, if one exists */}
       {route && <RouteCard />}
+
+      {/* Leave-now nudge */}
+      {!route && arrival && (
+        <LeaveNowCard
+          arrival={arrival}
+          walkSeconds={walkSeconds(walkMeters)}
+          stationName={station.name}
+        />
+      )}
 
       {/* Primary card — the one answer. Hidden when a route is showing. */}
       {!route && (
@@ -235,6 +248,7 @@ export function AnswerMode() {
       </button>
 
       <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <AlertsSheet open={alertsOpen} onClose={() => setAlertsOpen(false)} />
     </section>
   );
 }

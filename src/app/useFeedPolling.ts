@@ -1,35 +1,44 @@
 import { useEffect } from "react";
 import { useStore } from "@/store";
 
-const POLL_MS = 15_000;
+const ARRIVALS_MS = 15_000;
+const ALERTS_MS = 60_000;
 
-// Polls MTA feeds every 15s while the document is visible. Backs off when
-// backgrounded (PRD NFR-11 / §10.11).
+// Polls MTA feeds while the document is visible. Arrivals every 15s,
+// alerts every 60s. Backs off when backgrounded (PRD NFR-11 / §10.11).
 export function useFeedPolling() {
   const refresh = useStore((s) => s.refreshFeeds);
+  const refreshAlerts = useStore((s) => s.refreshAlerts);
 
   useEffect(() => {
-    let id: number | null = null;
     let cancelled = false;
-
-    const tick = () => {
-      if (cancelled) return;
-      if (document.visibilityState !== "visible") return;
+    const arrivalsTick = () => {
+      if (cancelled || document.visibilityState !== "visible") return;
       refresh();
     };
+    const alertsTick = () => {
+      if (cancelled || document.visibilityState !== "visible") return;
+      refreshAlerts();
+    };
 
-    tick();
-    id = window.setInterval(tick, POLL_MS);
+    arrivalsTick();
+    alertsTick();
+    const aId = window.setInterval(arrivalsTick, ARRIVALS_MS);
+    const alId = window.setInterval(alertsTick, ALERTS_MS);
 
     const onVis = () => {
-      if (document.visibilityState === "visible") refresh();
+      if (document.visibilityState === "visible") {
+        refresh();
+        refreshAlerts();
+      }
     };
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
       cancelled = true;
-      if (id != null) window.clearInterval(id);
+      window.clearInterval(aId);
+      window.clearInterval(alId);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [refresh]);
+  }, [refresh, refreshAlerts]);
 }

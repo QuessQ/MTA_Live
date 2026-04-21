@@ -13,6 +13,8 @@ export function SettingsSheet({ open, onClose }: Props) {
     setPreferredMaps,
     reducedMotion,
     setReducedMotion,
+    stepFree,
+    setStepFree,
     clearAllLocalData,
     favorites,
   } = useStore();
@@ -47,6 +49,15 @@ export function SettingsSheet({ open, onClose }: Props) {
         </Group>
 
         <Group label="Accessibility">
+          <Toggle
+            label="Step-free routing"
+            checked={stepFree}
+            onChange={setStepFree}
+          />
+          <p className="text-bone-300 text-[11px] leading-snug px-1">
+            Route only through stations with step-free access. Based on bundled
+            data; live elevator/escalator status coming soon.
+          </p>
           <Toggle
             label="Reduced motion"
             checked={reducedMotion}

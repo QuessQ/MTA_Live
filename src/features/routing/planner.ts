@@ -10,6 +10,10 @@ import type { SubwayLine } from "@/data/lines";
 const TRAIN_MPS = 12.5; // rough average NYC subway speed incl. dwell
 const TRANSFER_SEC = 180;
 
+export interface PlanOptions {
+  stepFree?: boolean;
+}
+
 export interface RouteLeg {
   line: SubwayLine;
   from: string;
@@ -32,10 +36,20 @@ interface Visit {
   edge: Edge | null;
 }
 
-export function planRoute(fromId: string, toId: string): Route | null {
+export function planRoute(
+  fromId: string,
+  toId: string,
+  opts: PlanOptions = {}
+): Route | null {
   if (fromId === toId) return null;
   const graph = getGraph();
   if (!graph.has(fromId) || !graph.has(toId)) return null;
+
+  const stepFreeOk = (id: string) => {
+    if (!opts.stepFree) return true;
+    if (id === fromId || id === toId) return true; // boarding/alighting
+    return STATION_BY_ID.get(id)?.accessible === true;
+  };
 
   // (stationId|line) -> best cost so far.
   const best = new Map<string, number>();
@@ -55,6 +69,12 @@ export function planRoute(fromId: string, toId: string): Route | null {
     }
     if ((best.get(key(cur)) ?? Infinity) < cur.cost) continue;
     for (const edge of graph.get(cur.stationId) ?? []) {
+      if (!stepFreeOk(edge.to)) continue;
+      // Transferring at a non-accessible station is not allowed in step-free
+      // mode either — catch that by checking at the current node when we're
+      // about to switch lines.
+      const isTransfer = cur.line && cur.line !== edge.line;
+      if (isTransfer && !stepFreeOk(cur.stationId)) continue;
       const ride = edge.meters / TRAIN_MPS;
       const transfer = cur.line && cur.line !== edge.line ? TRANSFER_SEC : 0;
       const next: Visit = {

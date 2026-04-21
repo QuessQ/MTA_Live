@@ -6,6 +6,8 @@ import type { Arrival } from "@/data/gtfs-rt/client";
 import { fetchAllFeeds } from "@/data/gtfs-rt/client";
 import type { Route } from "@/features/routing/planner";
 import { planRoute } from "@/features/routing/planner";
+import type { Alert } from "@/data/gtfs-rt/alerts";
+import { fetchAlerts } from "@/data/gtfs-rt/alerts";
 
 export type View = "answer" | "map";
 
@@ -16,6 +18,7 @@ interface PersistedPrefs {
   preferredMaps: "apple" | "google" | "auto";
   favorites: string[]; // station ids
   reducedMotion: boolean;
+  stepFree: boolean;
 }
 
 interface EphemeralState {
@@ -29,6 +32,8 @@ interface EphemeralState {
   arrivalsFetchedAt: number | null;
   feedStatus: FeedStatus;
   feedErrors: string[];
+  alerts: Alert[];
+  alertsFetchedAt: number | null;
 }
 
 interface Actions {
@@ -38,6 +43,7 @@ interface Actions {
   toggleMode: (m: TransitMode) => void;
   setPreferredMaps: (p: PersistedPrefs["preferredMaps"]) => void;
   setReducedMotion: (v: boolean) => void;
+  setStepFree: (v: boolean) => void;
   toggleFavorite: (stationId: string) => void;
   clearAllLocalData: () => void;
 
@@ -46,6 +52,7 @@ interface Actions {
   clearRoute: () => void;
 
   refreshFeeds: () => Promise<void>;
+  refreshAlerts: () => Promise<void>;
 }
 
 type Store = PersistedPrefs & EphemeralState & Actions;
@@ -66,6 +73,7 @@ export const useStore = create<Store>()(
       preferredMaps: "auto",
       favorites: [],
       reducedMotion: false,
+      stepFree: false,
 
       // ephemeral
       view: "answer",
@@ -78,6 +86,8 @@ export const useStore = create<Store>()(
       arrivalsFetchedAt: null,
       feedStatus: "idle",
       feedErrors: [],
+      alerts: [],
+      alertsFetchedAt: null,
 
       setView: (view) => set({ view }),
       setSelectedStation: (selectedStationId) =>
@@ -87,6 +97,17 @@ export const useStore = create<Store>()(
         set((s) => ({ modes: { ...s.modes, [m]: !s.modes[m] } })),
       setPreferredMaps: (preferredMaps) => set({ preferredMaps }),
       setReducedMotion: (reducedMotion) => set({ reducedMotion }),
+      setStepFree: (stepFree) => {
+        set({ stepFree });
+        // Recompute active route with new filter.
+        const s = get();
+        if (s.originStationId && s.destinationStationId) {
+          const route = planRoute(s.originStationId, s.destinationStationId, {
+            stepFree,
+          });
+          set({ route });
+        }
+      },
       toggleFavorite: (stationId) =>
         set((s) => ({
           favorites: s.favorites.includes(stationId)
@@ -104,6 +125,7 @@ export const useStore = create<Store>()(
           preferredMaps: "auto",
           favorites: [],
           reducedMotion: false,
+          stepFree: false,
           originStationId: null,
           destinationStationId: null,
           route: null,
@@ -112,14 +134,13 @@ export const useStore = create<Store>()(
       },
 
       setOriginStation: (id) => {
-        const dest = get().destinationStationId;
-        const origin = id;
-        const route = origin && dest ? planRoute(origin, dest) : null;
-        set({ originStationId: origin, route });
+        const { destinationStationId: dest, stepFree } = get();
+        const route = id && dest ? planRoute(id, dest, { stepFree }) : null;
+        set({ originStationId: id, route });
       },
       setDestinationStation: (id) => {
-        const origin = get().originStationId;
-        const route = origin && id ? planRoute(origin, id) : null;
+        const { originStationId: origin, stepFree } = get();
+        const route = origin && id ? planRoute(origin, id, { stepFree }) : null;
         set({ destinationStationId: id, route });
       },
       clearRoute: () =>
@@ -146,6 +167,18 @@ export const useStore = create<Store>()(
           });
         }
       },
+
+      refreshAlerts: async () => {
+        try {
+          const alerts = await fetchAlerts();
+          set({
+            alerts: alerts.filter((a) => a.activeNow),
+            alertsFetchedAt: Date.now(),
+          });
+        } catch {
+          // alerts are non-critical; swallow and keep prior snapshot
+        }
+      },
     }),
     {
       name: "pulse-prefs",
@@ -155,6 +188,7 @@ export const useStore = create<Store>()(
         preferredMaps: s.preferredMaps,
         favorites: s.favorites,
         reducedMotion: s.reducedMotion,
+        stepFree: s.stepFree,
       }),
     }
   )

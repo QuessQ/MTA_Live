@@ -14,9 +14,12 @@ const CORS_HEADERS: Record<string, string> = {
   "access-control-max-age": "86400",
 };
 
-// Only allow paths matching the NYCT GTFS-RT feed naming convention.
-// e.g. /nyct%2Fgtfs, /nyct%2Fgtfs-ace, /nyct%2Fgtfs-bdfm, ...
-const ALLOWED = /^\/nyct(%2F|\/)gtfs(-[a-z0-9]+)?$/i;
+// Paths we're willing to proxy. We keep this deliberately tight so the
+// relay can't be used as an open proxy. Covers:
+//   /nyct%2Fgtfs, /nyct%2Fgtfs-ace, /nyct%2Fgtfs-bdfm ... (subway)
+//   /camsys%2Fsubway-alerts                             (service alerts)
+const ALLOWED =
+  /^\/(nyct(%2F|\/)gtfs(-[a-z0-9]+)?|camsys(%2F|\/)subway-alerts)$/i;
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
