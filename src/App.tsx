@@ -5,6 +5,7 @@ import { useFeedPolling } from "./app/useFeedPolling";
 import { useCommuteObserver } from "./app/useCommuteObserver";
 import { parseIncoming, type SharePayload } from "./features/share-eta/codec";
 import { RecipientView } from "./features/share-eta/RecipientView";
+import { Onboarding } from "./features/onboarding/Onboarding";
 
 function useSharedEta(): [SharePayload | null, () => void] {
   const [payload, setPayload] = useState<SharePayload | null>(() => parseIncoming());
@@ -23,5 +24,10 @@ export default function App() {
   useCommuteObserver();
 
   if (shared) return <RecipientView payload={shared} onDismiss={dismissShared} />;
-  return <Shell />;
+  return (
+    <>
+      <Shell />
+      <Onboarding />
+    </>
+  );
 }

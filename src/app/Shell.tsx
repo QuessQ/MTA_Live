@@ -3,6 +3,7 @@ import { useStore } from "@/store";
 import { AnswerMode } from "@/features/answer/AnswerMode";
 import { ModeChips } from "@/features/filters/ModeChips";
 import { StationSheet } from "@/features/arrivals/StationSheet";
+import { MapSearchFAB } from "@/features/search/MapSearchFAB";
 
 // MapLibre is heavy (~700 KB). Defer it until the rider asks for the map.
 const MapView = lazy(() =>
@@ -64,6 +65,7 @@ export function Shell() {
             {view === "map" && <MapView />}
           </Suspense>
           <ModeChips />
+          <MapSearchFAB />
           <button
             onClick={() => setView("answer")}
             className="absolute left-1/2 -translate-x-1/2 bottom-[calc(var(--safe-bottom)+12px)] z-20 rounded-full bg-ink-100/90 border border-ink-300 px-4 py-2 text-xs text-bone-200 no-select backdrop-blur"

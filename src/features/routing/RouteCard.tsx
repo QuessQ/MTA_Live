@@ -2,6 +2,7 @@ import { useStore } from "@/store";
 import { STATION_BY_ID } from "@/data/stations";
 import { LineBullet } from "@/ui/LineBullet";
 import { ShareEtaButton } from "@/features/share-eta/ShareEtaButton";
+import { hintFor, carPositionLabel } from "@/data/boarding";
 
 export function RouteCard() {
   const { route, clearRoute, destinationStationId, originStationId } = useStore();
@@ -49,21 +50,30 @@ export function RouteCard() {
           const to = STATION_BY_ID.get(leg.to);
           if (!from || !to) return null;
           const min = Math.max(1, Math.round(leg.seconds / 60));
+          const hint = hintFor(leg.from, leg.to);
           return (
             <li
               key={i}
-              className="flex items-center gap-3 rounded-lg bg-ink-200/60 px-3 py-2"
+              className="rounded-lg bg-ink-200/60 px-3 py-2"
             >
-              <LineBullet line={leg.line} size="sm" />
-              <span className="flex-1 text-bone-100 text-xs">
-                {from.name} → {to.name}
-                {leg.stops.length > 2 && (
-                  <span className="text-bone-300 numerals ml-1">
-                    · {leg.stops.length - 1} stops
-                  </span>
-                )}
-              </span>
-              <span className="numerals text-bone-0 text-xs">{min}m</span>
+              <div className="flex items-center gap-3">
+                <LineBullet line={leg.line} size="sm" />
+                <span className="flex-1 text-bone-100 text-xs">
+                  {from.name} → {to.name}
+                  {leg.stops.length > 2 && (
+                    <span className="text-bone-300 numerals ml-1">
+                      · {leg.stops.length - 1} stops
+                    </span>
+                  )}
+                </span>
+                <span className="numerals text-bone-0 text-xs">{min}m</span>
+              </div>
+              {hint && (
+                <p className="mt-1.5 pl-8 text-[11px] text-gold-soft/90">
+                  ↳ {carPositionLabel(hint.carsFromFront)}
+                  {hint.note ? ` · ${hint.note}` : ""}
+                </p>
+              )}
             </li>
           );
         })}
