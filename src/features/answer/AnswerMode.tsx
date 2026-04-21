@@ -14,6 +14,8 @@ import { AlertsButton } from "@/features/alerts/AlertsButton";
 import { AlertsSheet } from "@/features/alerts/AlertsSheet";
 import { LeaveNowCard } from "@/features/leave-now/LeaveNowCard";
 import { OmnyCard } from "@/features/omny/OmnyCard";
+import { CommuteActions } from "@/features/commute/CommuteActions";
+import { CommuteSuggestion } from "@/features/commute/CommuteSuggestion";
 
 interface AnswerCard {
   station: Station;
@@ -153,6 +155,8 @@ export function AnswerMode() {
         />
       </div>
 
+      <CommuteActions />
+
       {/* Route card, if one exists */}
       {route && <RouteCard />}
 
@@ -235,6 +239,8 @@ export function AnswerMode() {
       )}
 
       <FavoritesRow />
+
+      {!route && <CommuteSuggestion />}
 
       <OmnyCard />
 

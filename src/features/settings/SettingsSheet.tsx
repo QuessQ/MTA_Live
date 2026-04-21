@@ -2,6 +2,9 @@ import { BottomSheet } from "@/ui/BottomSheet";
 import { useStore } from "@/store";
 import { detectPlatform } from "@/lib/platform";
 import { useOmny } from "@/features/omny/omnyStore";
+import { useCommute } from "@/features/commute/commuteStore";
+import { clearObservations } from "@/features/commute/observations";
+import { STATION_BY_ID } from "@/data/stations";
 
 interface Props {
   open: boolean;
@@ -20,6 +23,7 @@ export function SettingsSheet({ open, onClose }: Props) {
     favorites,
   } = useStore();
   const { enabled: omnyEnabled, enable: setOmnyEnabled, clear: clearOmny } = useOmny();
+  const { commutes, remove: removeCommute, clear: clearCommutes } = useCommute();
 
   const platform = detectPlatform();
 
@@ -67,6 +71,39 @@ export function SettingsSheet({ open, onClose }: Props) {
           />
         </Group>
 
+        <Group label="Commutes">
+          {commutes.length === 0 ? (
+            <p className="text-bone-300 text-[11px] leading-snug px-1">
+              PULSE will offer to save a commute after it sees the same
+              morning/evening pattern a few times. Learned locally, never
+              transmitted.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {commutes.map((c) => {
+                const home = STATION_BY_ID.get(c.home);
+                const work = STATION_BY_ID.get(c.work);
+                return (
+                  <li
+                    key={c.id}
+                    className="flex items-center justify-between rounded-lg bg-ink-100 border border-ink-300 px-3 py-2.5"
+                  >
+                    <span className="text-bone-100 text-xs numerals">
+                      {home?.name ?? "?"} ⇄ {work?.name ?? "?"}
+                    </span>
+                    <button
+                      onClick={() => removeCommute(c.id)}
+                      className="text-[10px] numerals uppercase tracking-widest text-red-300 hover:text-red-200"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Group>
+
         <Group label="OMNY fare companion">
           <Toggle
             label="Enable OMNY companion"
@@ -91,7 +128,10 @@ export function SettingsSheet({ open, onClose }: Props) {
               ) {
                 clearAllLocalData();
                 clearOmny();
+                clearCommutes();
+                clearObservations().catch(() => { /* ignore */ });
                 try { localStorage.removeItem("pulse-omny"); } catch { /* ignore */ }
+                try { localStorage.removeItem("pulse-commutes"); } catch { /* ignore */ }
                 onClose();
               }
             }}

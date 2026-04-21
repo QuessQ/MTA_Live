@@ -60,8 +60,8 @@ function routeToGeoJSON(route: Route | null): GeoJSON.FeatureCollection {
 export function MapView() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MLMap | null>(null);
-  const markersRef = useRef<Marker[]>([]);
-  const { setSelectedStation, userLocation, view, route } = useStore();
+  const markersRef = useRef<{ marker: Marker; mode: Station["mode"] }[]>([]);
+  const { setSelectedStation, userLocation, view, route, modes } = useStore();
 
   // Init map once. We intentionally don't depend on userLocation here — the
   // recenter effect below handles location updates. Re-initializing the map
@@ -89,7 +89,7 @@ export function MapView() {
           e.stopPropagation();
           setSelectedStation(station.id);
         });
-        markersRef.current.push(m);
+        markersRef.current.push({ marker: m, mode: station.mode });
       }
 
       map.addSource(ROUTE_SOURCE_ID, {
@@ -122,7 +122,7 @@ export function MapView() {
     });
 
     return () => {
-      markersRef.current.forEach((m) => m.remove());
+      markersRef.current.forEach((m) => m.marker.remove());
       markersRef.current = [];
       map.remove();
       mapRef.current = null;
@@ -161,6 +161,14 @@ export function MapView() {
     }, 300);
     return () => window.clearTimeout(id);
   }, [view, userLocation, route]);
+
+  // Show/hide station markers based on the mode-filter chip state.
+  useEffect(() => {
+    for (const { marker, mode } of markersRef.current) {
+      const el = marker.getElement();
+      el.style.display = modes[mode] ? "" : "none";
+    }
+  }, [modes]);
 
   // Update route polyline whenever the route changes.
   useEffect(() => {
