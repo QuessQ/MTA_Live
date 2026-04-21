@@ -1,20 +1,18 @@
 import type { TransitStop, Arrival, TransitLine, ServiceAlert, RouteOption } from '@/types';
 import type { Coordinates } from './geolocation';
 
-const API_BASE = import.meta.env.VITE_MTA_API_BASE ?? 'https://api-endpoint.mta.info';
-const API_KEY = import.meta.env.VITE_MTA_API_KEY ?? '';
+const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
 
 async function fetchJson<T>(path: string, params?: Record<string, string>): Promise<T> {
-  const url = new URL(path, API_BASE);
+  const url = new URL(path, window.location.origin);
+  url.pathname = API_BASE + path;
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  if (API_KEY) {
-    headers['x-api-key'] = API_KEY;
-  }
 
-  const response = await fetch(url.toString(), { headers });
+  const response = await fetch(url.toString(), {
+    headers: { Accept: 'application/json' },
+  });
   if (!response.ok) {
     throw new Error(`Transit API error: ${response.status} ${response.statusText}`);
   }
